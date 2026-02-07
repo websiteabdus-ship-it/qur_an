@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Al-Qur’an</title>
+
+<!-- PWA MANIFEST -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+
+<style>
+:root{
+  --bg:#f7f7f7;
+  --card:#ffffff;
+  --text:#222;
+  --sub:#555;
+}
+body.dark{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#f8fafc;
+  --sub:#cbd5e1;
+}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+header{
+  background:#0f766e;
+  color:#fff;
+  padding:16px;
+  text-align:center;
+  font-size:18px;
+  font-weight:bold;
+}
+header small{
+  display:block;
+  font-size:12px;
+  opacity:.9;
+}
+.container{
+  padding:16px;
+}
+select,button{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  font-size:14px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+button{
+  background:#e5e7eb;
+}
+.card{
+  background:var(--card);
+  padding:16px;
+  margin-bottom:14px;
+  border-radius:12px;
+}
+.arab{
+  font-size:28px;
+  text-align:right;
+  line-height:2;
+}
+.arti{
+  margin-top:10px;
+  font-size:14px;
+  color:var(--sub);
+}
+.footer{
+  text-align:center;
+  font-size:12px;
+  color:var(--sub);
+  margin:20px 0;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  Al-Qur’an
+  <small>Firman Allah SWT</small>
+</header>
+
+<div class="container">
+
+<select id="juzSelect">
+  <option value="">Pilih Juz</option>
+</select>
+
+<select id="suratSelect">
+  <option value="">Pilih Surat</option>
+</select>
+
+<button onclick="toggleArti()">Tampilkan / Sembunyikan Terjemah</button>
+<button onclick="toggleDark()">Mode Malam</button>
+
+<div id="ayat"></div>
+
+</div>
+
+<div class="footer">
+  Al-Qur’an • Bacaan untuk ibadah
+</div>
+
+<script>
+let showArti = true;
+
+function toggleArti(){
+  showArti = !showArti;
+  document.querySelectorAll(".arti").forEach(a=>{
+    a.style.display = showArti ? "block" : "none";
+  });
+}
+
+function toggleDark(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+}
+
+function saveLast(type, value){
+  localStorage.setItem("lastType", type);
+  localStorage.setItem("lastValue", value);
+}
+
+window.onload = function(){
+  if(localStorage.getItem("darkMode")==="true"){
+    document.body.classList.add("dark");
+  }
+
+  for(let i=1;i<=30;i++){
+    juzSelect.innerHTML += `<option value="${i}">Juz ${i}</option>`;
+  }
+
+  fetch("https://api.quran.gading.dev/surah")
+  .then(r=>r.json())
+  .then(d=>{
+    d.data.forEach(x=>{
+      suratSelect.innerHTML += `<option value="${x.number}">
+        ${x.number}. ${x.name.transliteration.id}
+      </option>`;
+    });
+
+    const t = localStorage.getItem("lastType");
+    const v = localStorage.getItem("lastValue");
+    if(t && v){
+      if(t==="surat"){
+        suratSelect.value = v;
+        loadSurat(v);
+      }else if(t==="juz"){
+        juzSelect.value = v;
+        loadJuz(v);
+      }
+    }
+  });
+};
+
+function loadSurat(no){
+  ayat.innerHTML="";
+  fetch("https://api.quran.gading.dev/surah/"+no)
+  .then(r=>r.json())
+  .then(d=>{
+    d.data.verses.forEach(v=>{
+      ayat.innerHTML += `
+      <div class="card">
+        <div class="arab">${v.text.arab}</div>
+        <div class="arti">${v.translation.id}</div>
+      </div>`;
+    });
+    saveLast("surat", no);
+  });
+}
+
+function loadJuz(no){
+  ayat.innerHTML="";
+  fetch("https://api.quran.gading.dev/juz/"+no)
+  .then(r=>r.json())
+  .then(d=>{
+    d.data.verses.forEach(v=>{
+      ayat.innerHTML += `
+      <div class="card">
+        <div class="arab">${v.text.arab}</div>
+        <div class="arti">${v.translation.id}</div>
+      </div>`;
+    });
+    saveLast("juz", no);
+  });
+}
+
+suratSelect.onchange = function(){
+  if(!this.value) return;
+  juzSelect.value="";
+  loadSurat(this.value);
+}
+juzSelect.onchange = function(){
+  if(!this.value) return;
+  suratSelect.value="";
+  loadJuz(this.value);
+}
+</script>
+
+</body>
+</html>
